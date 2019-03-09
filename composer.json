@@ -39,7 +39,6 @@
             "database/seeds",
             "database/factories"
         ],
-        // 執行 composer dumpautoload
         "files": [
             "bootstrap/helpers.php"
         ]
