@@ -5,14 +5,17 @@
   <div class="row">
     <div class="col-md-10 offset-md-1">
       <div class="card panel-default">
-        <div class="card-header">收貨地址列表</div>
+        <div class="card-header">
+          收貨地址列表
+          <a href="{{ route('user_addresses.create') }}" class="float-right">新增收貨地址</a>
+        </div>
         <div class="card-body">
           <table class="table table-bordered table-striped">
             <thead>
             <tr>
               <th>收貨人</th>
               <th>地址</th>
-              <th>電子郵件</th>
+              <th>郵遞區號</th>
               <th>電話</th>
               <th>操作</th>
             </tr>
