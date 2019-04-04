@@ -21,27 +21,17 @@ class ProductsController extends Controller
             ->body($this->grid());
     }
 
-    public function show($id, Content $content)
-    {
-        return $content
-            ->header('Detail')
-            ->description('description')
-            ->body($this->detail($id));
-    }
-
     public function edit($id, Content $content)
     {
         return $content
-            ->header('Edit')
-            ->description('description')
+            ->header('編輯商品')
             ->body($this->form()->edit($id));
     }
 
     public function create(Content $content)
     {
         return $content
-            ->header('Create')
-            ->description('description')
+            ->header('創建商品')
             ->body($this->form());
     }
 
@@ -74,37 +64,34 @@ class ProductsController extends Controller
         return $grid;
     }
 
-    protected function detail($id)
-    {
-        $show = new Show(Product::findOrFail($id));
-
-        $show->id('Id');
-        $show->title('Title');
-        $show->description('Description');
-        $show->image('Image');
-        $show->on_sale('On sale');
-        $show->rating('Rating');
-        $show->sold_count('Sold count');
-        $show->review_count('Review count');
-        $show->price('Price');
-        $show->created_at('Created at');
-        $show->updated_at('Updated at');
-
-        return $show;
-    }
-
     protected function form()
     {
         $form = new Form(new Product);
 
-        $form->text('title', 'Title');
-        $form->textarea('description', 'Description');
-        $form->image('image', 'Image');
-        $form->switch('on_sale', 'On sale')->default(1);
-        $form->decimal('rating', 'Rating')->default(5.00);
-        $form->number('sold_count', 'Sold count');
-        $form->number('review_count', 'Review count');
-        $form->decimal('price', 'Price');
+        // 建立一個輸入框，第一個參數 title 是模型的欄位，第二個參數是該欄位描述
+        $form->text('title', '商品名稱')->rules('required');
+
+        // 建立一個選擇圖片的框
+        $form->image('image', '封面圖片')->rules('required|image');
+
+        // 建立一個文本編輯器
+        $form->editor('description', '商品描述')->rules('required');
+
+        // 建立一組單選框
+        $form->radio('on_sale', '上架')->options(['1' => '是', '0'=> '否'])->default('0');
+
+        // 直接增加一對多的關聯模型
+        $form->hasMany('skus', 'SKU 列表', function (Form\NestedForm $form) {
+            $form->text('title', 'SKU 名稱')->rules('required');
+            $form->text('description', 'SKU 描述')->rules('required');
+            $form->text('price', '單價')->rules('required|numeric|min:0.01');
+            $form->text('stock', '剩餘庫存')->rules('required|integer|min:0');
+        });
+
+        // 定義事件回調，當模型即將保存時會觸發這個回調
+        $form->saving(function (Form $form) {
+            $form->model()->price = collect($form->input('skus'))->where(Form::REMOVE_FLAG_NAME, 0)->min('price') ?: 0;
+        });
 
         return $form;
     }
