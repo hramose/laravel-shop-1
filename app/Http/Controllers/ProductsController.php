@@ -56,6 +56,40 @@ class ProductsController extends Controller
             throw new InvalidRequestException('商品未上架');
         }
 
-        return view('products.show', ['product' => $product]);
+        $favored = false;
+        // 使用者未登入時返回的是 null，已登入時返回的是對應的使用者物件
+        if($user = $request->user()) {
+            // 從目前使用者已收藏的商品中搜尋 id 為當前商品 id 的商品
+            // boolval() 函數用於把值轉為布林值
+            $favored = boolval($user->favoriteProducts()->find($product->id));
+        }
+
+        return view('products.show', ['product' => $product, 'favored' => $favored]);
+    }
+
+    // 收藏商品
+    public function favor(Product $product, Request $request)
+    {
+        $user = $request->user();
+        // 先判斷目前使用者是否已經收藏商品，如果已經收藏則不做任何操作返回
+        if ($user->favoriteProducts()->find($product->id)) {
+            return [];
+        }
+        // 否則通過 attach()方法將目前使用者和此商品關聯起來
+        //attach()方法的參數可以是模型的id，也可以是模型物件本身
+        //這裡也可以寫成attach($product->id)
+        $user->favoriteProducts()->attach($product);
+
+        return [];
+    }
+
+    // 取消收藏商品
+    public function disfavor(Product $product, Request $request)
+    {
+        $user = $request->user();
+        // detach()方法用於取消多對多關聯，接受參數與 attach() 方法一致
+        $user->favoriteProducts()->detach($product);
+
+        return [];
     }
 }

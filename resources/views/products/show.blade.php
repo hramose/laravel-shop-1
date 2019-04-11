@@ -36,7 +36,11 @@
         </div>
         <div class="cart_amount"><label>數量</label><input type="text" class="form-control form-control-sm" value="1"><span>件</span><span class="stock"></span></div>
         <div class="buttons">
-          <button class="btn btn-success btn-favor">❤ 收藏</button>
+          @if($favored)
+            <button class="btn btn-danger btn-disfavor">取消收藏</button>
+          @else
+            <button class="btn btn-success btn-favor">❤ 收藏</button>
+          @endif
           <button class="btn btn-primary btn-add-to-cart">加入購物車</button>
         </div>
       </div>
@@ -72,6 +76,42 @@
       $('.product-info .price span').text($(this).data('price'));
       $('.product-info .stock').text('庫存：' + $(this).data('stock') + '件');
     });
+
+    // 監聽收藏按鈕的點擊事件
+    $('.btn-favor').click(function () {
+      // 發起一個 post ajax 請求，請求 url 通過後端的 route() 函數生成
+      axios.post('{{ route('products.favor', ['product' => $product->id]) }}')
+        .then(function () { // 請求成功會執行這個回調
+          swal('操作成功', '', 'success')
+          .then(function () {
+              // 刷新頁面來刷新收藏按鈕的狀態，當使用者點擊彈出框的時候這個回調會被觸發
+              location.reload();
+          });
+        }, function(error) { // 請求失敗會執行這個回調
+          // 如果返回碼是 401 代表沒登入
+          if (error.response && error.response.status === 401) {
+            swal('請先登入', '', 'error');
+          } else if (error.response && error.response.data.msg) {
+            // 其他有 msg 的情況，將 msg 提示給使用者
+            swal(error.response.data.msg, '', 'error');
+          }  else {
+            // 其他情況應該是系統掛了
+            swal('系統錯誤', '', 'error');
+          }
+        });
+    });
+
+    // 取消收藏商品
+    $('.btn-disfavor').click(function () {
+      axios.delete('{{ route('products.disfavor', ['product' => $product->id]) }}')
+        .then(function () {
+          swal('操作成功', '', 'success')
+            .then(function () {
+              location.reload();
+            });
+        });
+    });
+
   });
 </script>
 @endsection
