@@ -112,6 +112,41 @@
         });
     });
 
+    // 加入購物車按鈕點擊事件
+    $('.btn-add-to-cart').click(function () {
+
+      // 請求加入購物車API
+      axios.post('{{ route('cart.add') }}', {
+        sku_id: $('label.active input[name=skus]').val(),
+        amount: $('.cart_amount input').val(),
+      })
+        .then(function () { // 請求成功執行此回調
+          swal('加入購物車成功', '', 'success');
+        }, function (error) { // 請求失敗執行此回調
+          if (error.response.status === 401) {
+
+            // http 狀態碼為 401 代表使用者未登入
+            swal('請先登入', '', 'error');
+
+          } else if (error.response.status === 422) {
+
+            // http 狀態碼為 422 代表使用者輸入校驗失敗
+            var html = '<div>';
+            _.each(error.response.data.errors, function (errors) {
+              _.each(errors, function (error) {
+                html += error+'<br>';
+              })
+            });
+            html += '</div>';
+            swal({content: $(html)[0], icon: 'error'})
+          } else {
+
+            // 其他情況應該是系統掛了
+            swal('系統錯誤', '', 'error');
+          }
+        })
+    });
+
   });
 </script>
 @endsection
