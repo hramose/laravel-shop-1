@@ -121,7 +121,10 @@
         amount: $('.cart_amount input').val(),
       })
         .then(function () { // 請求成功執行此回調
-          swal('加入購物車成功', '', 'success');
+          swal('加入購物車成功', '', 'success')
+            .then(function() {
+              location.href = '{{ route('cart.index') }}';
+            });
         }, function (error) { // 請求失敗執行此回調
           if (error.response.status === 401) {
 
