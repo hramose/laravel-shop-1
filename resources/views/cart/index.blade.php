@@ -50,6 +50,31 @@
       @endforeach
       </tbody>
     </table>
+    <div>
+      <form class="form-horizontal" role="form" id="order-form">
+        <div class="form-group row">
+          <label class="col-form-label col-sm-3 text-md-right">選擇收貨地址</label>
+          <div class="col-sm-9 col-md-7">
+            <select class="form-control" name="address">
+              @foreach($addresses as $address)
+                <option value="{{ $address->id }}">{{ $address->full_address }} {{ $address->contact_name }} {{ $address->contact_phone }}</option>
+              @endforeach
+            </select>
+          </div>
+        </div>
+        <div class="form-group row">
+          <label class="col-form-label col-sm-3 text-md-right">備註</label>
+          <div class="col-sm-9 col-md-7">
+            <textarea name="remark" class="form-control" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="offset-sm-3 col-sm-3">
+            <button type="button" class="btn btn-primary btn-create-order">提交訂單</button>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
 </div>
@@ -86,7 +111,7 @@
     // 監聽 全選/取消全選 單選框的變更事件
     $('#select-all').change(function() {
       // 獲取單選框的選中狀態
-      // prop() 方法可以知道標籤中是否包含某個屬性，當單選框被勾選時，對應的標籤就會新增一個 checked 的屬性
+      // prop() 方法可以知道邊謙中是否包含某個屬性，當單選框被勾選時，對應的標籤就會新增一個 checked 的屬性
       var checked = $(this).prop('checked');
       // 獲取所有 name=select 並且不帶有 disabled 屬性的勾選框
       // 對於已經下架的商品我們不希望對應的勾選框會被選中，因此我們需要加上 :not([disabled]) 這個條件
@@ -95,6 +120,56 @@
         $(this).prop('checked', checked);
       });
     });
+
+    // 監聽建立訂單按鈕的點擊事件
+    $('.btn-create-order').click(function () {
+      // 構建請求參數，將使用者選擇的地址的 id 和背著內容寫入請求參數
+      var req = {
+        address_id: $('#order-form').find('select[name=address]').val(),
+        items: [],
+        remark: $('#order-form').find('textarea[name=remark]').val(),
+      };
+      // 遍歷 <table> 標籤內所有帶有 data-id 屬性的 <tr> 標籤，也就是每一個購物車中的商品 SKU
+      $('table tr[data-id]').each(function () {
+        // 獲取當前行的單選框
+        var $checkbox = $(this).find('input[name=select][type=checkbox]');
+        // 如果單選框被禁用或者沒有被選中則跳過
+        if ($checkbox.prop('disabled') || !$checkbox.prop('checked')) {
+          return;
+        }
+        // 獲取當前行中數量輸入框
+        var $input = $(this).find('input[name=amount]');
+        // 如果使用者將數量設為 0 或者不是一個數字，則也跳過
+        if ($input.val() == 0 || isNaN($input.val())) {
+          return;
+        }
+        // 把 SKU id 和數量存入請求參數陣列中
+        req.items.push({
+          sku_id: $(this).data('id'),
+          amount: $input.val(),
+        })
+      });
+      axios.post('{{ route('orders.store') }}', req)
+        .then(function (response) {
+          swal('訂單提交成功', '', 'success');
+        }, function (error) {
+          if (error.response.status === 422) {
+            // http 狀態碼為 422 代表使用者輸入效驗失敗
+            var html = '<div>';
+            _.each(error.response.data.errors, function (errors) {
+              _.each(errors, function (error) {
+                html += error+'<br>';
+              })
+            });
+            html += '</div>';
+            swal({content: $(html)[0], icon: 'error'})
+          } else {
+            // 其他情況應該是系統掛了
+            swal('系統錯誤', '', 'error');
+          }
+        });
+    });
+
 
   });
 </script>
