@@ -82,4 +82,11 @@ class OrdersController extends Controller
 
         return view('orders.index', ['orders' => $orders]);
     }
+
+    // load() 為延遲預加載，和with()不同在於load()是在已經查詢出來的模型中調用，而with()則是在ORM查詢建構器上調用
+    public function show(Order $order, Request $request)
+    {
+        $this->authorize('own', $order);
+        return view('orders.show', ['order' => $order->load(['items.productSku', 'items.product'])]);
+    }
 }

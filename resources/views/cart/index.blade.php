@@ -151,7 +151,10 @@
       });
       axios.post('{{ route('orders.store') }}', req)
         .then(function (response) {
-          swal('訂單提交成功', '', 'success');
+          swal('訂單提交成功', '', 'success')
+            .then(() => {
+              location.href = '/orders/' + response.data.id;
+            });
         }, function (error) {
           if (error.response.status === 422) {
             // http 狀態碼為 422 代表使用者輸入效驗失敗
