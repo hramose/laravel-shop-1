@@ -71,6 +71,7 @@
         @if(!$order->paid_at && !$order->closed)
         <div class="payment-buttons">
           <a class="btn btn-primary btn-sm" href="{{ route('payment.alipay', ['order' => $order->id]) }}">支付寶支付</a>
+          <button class="btn btn-sm btn-success" id='btn-wechat'>微信支付</button>
         </div>
         @endif
         <!-- 支付按鈕結束 -->
@@ -80,4 +81,26 @@
 </div>
 </div>
 </div>
+@endsection
+
+@section('scriptsAfterJs')
+<script>
+  $(document).ready(function() {
+    // 微信支付按鈕事件
+    $('#btn-wechat').click(function() {
+      swal({
+        // content 參數可以是一個DOM元素，這裡我們用jQuery動態產生一個img標籤，並通過[0]的方式取得DOM元素
+        content: $('<img src="{{ route('payment.wechat', ['order' => $order->id]) }}" />')[0],
+        // buttons參數可以設置按鈕顯示
+        buttons: ['關閉', '已完成付款'],
+      })
+      .then(function(result) {
+      // 如果使用者點擊了 已完成付款 按鈕，則重新加載頁面
+        if (result) {
+          location.reload();
+        }
+      })
+    });
+  });
+</script>
 @endsection

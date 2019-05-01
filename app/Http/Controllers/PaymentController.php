@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Exceptions\InvalidRequestException;
 use Carbon\Carbon;
+use Endroid\QrCode\QrCode;
 
 class PaymentController extends Controller
 {
@@ -24,6 +25,28 @@ class PaymentController extends Controller
             'total_amount' => $order->total_amount, // 訂單金額，單位元，支持小數點後兩位
             'subject'      => '支付 Laravel Shop 的訂單'.$order->no, // 訂單標題
         ]);
+    }
+
+    public function payByWechat(Order $order, Request $request) {
+        // 校驗權限
+        $this->authorize('own', $order);
+        // 校驗訂單狀態
+        if ($order->paid_at || $order->closed) {
+            throw new InvalidRequestException('訂單狀態不正確');
+        }
+
+        // scan 方法為拉起微信掃碼支付
+        $wechatOrder = app('wechat_pay')->scan([
+            'out_trade_no' => $order->no,  // 商品訂單流水號，與支付寶 out_trade_no 一樣
+            'total_fee' => $order->total_amount * 100, // 與支付寶不同，微信支付的金額單位是分
+            'body'      => '支付 Laravel Shop 的訂單：'.$order->no, // 訂單描述
+        ]);
+
+        // 把要轉換的字串作為QRCode的構造函數參數
+        $qrCode = new QrCode($wechatOrder->code_url);
+
+        // 將產生的二維條碼圖片數據以字串形式輸出，並加上對應的回應類型
+        return response($qrCode->writeString(), 200, ['Content-Type' => $qrCode->getContentType()]);
     }
 
     // 前端回調頁面
@@ -73,5 +96,32 @@ class PaymentController extends Controller
         ]);
 
         return app('alipay')->success();
+    }
+
+    // 微信只有後端回調
+    public function wechatNotify()
+    {
+        // 校驗回調參數是否正確
+        $data = app('wechat_pay')->verify();
+        // 找到對應的訂單
+        $order = Order::where('no', $data->out_trade_no)->first();
+        // 訂單不存在則告知微信支付
+        if (!$order) {
+            return 'fail';
+        }
+        // 訂單已支付
+        if ($order->paid_at) {
+            // 告知微信支付此訂單已處理
+            return app('wechat_pay')->success();
+        }
+
+        // 將訂單標記為已支付
+        $order->update([
+            'paid_at'        => Carbon::now(),
+            'payment_method' => 'wechat',
+            'payment_no'     => $data->transaction_id,
+        ]);
+
+        return app('wechat_pay')->success();
     }
 }
